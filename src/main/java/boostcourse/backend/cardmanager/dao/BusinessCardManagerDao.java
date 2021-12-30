@@ -20,58 +20,37 @@ public class BusinessCardManagerDao {
     public List<BusinessCard> searchBusinessCard(String keyword) {
         List<BusinessCard> list = new ArrayList<>();
 
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
 
-        try {
-            conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
-            String sql = "SELECT name, phone, companyName, createDate FROM card where name LIKE ?";
-            ps = conn.prepareStatement(sql);
+        String sql = "SELECT name, phone, companyName, createDate FROM card where name LIKE ?";
+
+        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
             ps.setString(1, "%" + keyword + "%");
-            rs = ps.executeQuery();
 
-            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd hh:mm:ss zzz yyyy", new Locale("us"));
+            try (ResultSet rs = ps.executeQuery()) {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd hh:mm:ss zzz yyyy", new Locale("us"));
 
-            while (rs.next()) {
-                String name = rs.getString(1);
-                String phone = rs.getString(2);
-                String companyName = rs.getString(3);
-                String date = rs.getString(4);
-                Date createDate = dateFormat.parse(date);
+                while (rs.next()) {
+                    String name = rs.getString(1);
+                    String phone = rs.getString(2);
+                    String companyName = rs.getString(3);
+                    String date = rs.getString(4);
+                    Date createDate = dateFormat.parse(date);
 
-                BusinessCard businessCard = new BusinessCard(name, phone, companyName, createDate);
-                list.add(businessCard);
+                    BusinessCard businessCard = new BusinessCard(name, phone, companyName, createDate);
+                    list.add(businessCard);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (Exception exception) {
-                }
-            }
-
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (Exception ex) {
-                }
-            }
-
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (Exception ex) {
-                }
-            }
         }
 
         return list;
@@ -80,19 +59,16 @@ public class BusinessCardManagerDao {
     public int addBusinessCard(BusinessCard businessCard) {
         int insertCount = 0;
 
-        Connection conn = null;
-        PreparedStatement ps = null;
-
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
 
-        try {
-            conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
-            String sql = "INSERT INTO card (name, phone, companyName, createDate) VALUES (?, ?, ?, ?)";
-            ps = conn.prepareStatement(sql);
+        String sql = "INSERT INTO card (name, phone, companyName, createDate) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, businessCard.getName());
             ps.setString(2, businessCard.getPhone());
@@ -102,22 +78,7 @@ public class BusinessCardManagerDao {
             insertCount = ps.executeUpdate();
         } catch (Exception ex) {
             ex.printStackTrace();
-        } finally {
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (Exception ex) {
-                }
-            }
-
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (Exception exception) {
-                }
-            }
         }
-
 
         return insertCount;
     }
