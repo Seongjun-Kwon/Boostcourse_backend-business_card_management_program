@@ -3,13 +3,16 @@ package boostcourse.backend.cardmanager;
 import boostcourse.backend.cardmanager.dao.BusinessCardManagerDao;
 import boostcourse.backend.cardmanager.dto.BusinessCard;
 import boostcourse.backend.cardmanager.ui.CardManagerUI;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.util.List;
 
 public class CardManager {
     public static void main(String[] args) {
+        ApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
         CardManagerUI cardManagerUI = CardManagerUI.getInstance();
-        BusinessCardManagerDao businessCardManagerDao = new BusinessCardManagerDao();
+        BusinessCardManagerDao businessCardManagerDao = ac.getBean(BusinessCardManagerDao.class);
 
         while_loop:
         while (true) {

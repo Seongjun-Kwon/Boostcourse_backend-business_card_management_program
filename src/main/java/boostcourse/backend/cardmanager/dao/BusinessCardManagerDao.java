@@ -1,85 +1,64 @@
 package boostcourse.backend.cardmanager.dao;
 
 import boostcourse.backend.cardmanager.dto.BusinessCard;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
+import javax.sql.DataSource;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
+import static boostcourse.backend.cardmanager.dao.BusinessCardManagerDaoSqls.INSERT_ONE;
+import static boostcourse.backend.cardmanager.dao.BusinessCardManagerDaoSqls.SELECT_ALL;
+
+@Repository
 public class BusinessCardManagerDao {
-    private static String dbUrl = "jdbc:mysql://localhost:3306/connectdb";
-    private static String dbUser = "connectuser";
-    private static String dbPassword = "connect123!@#";
+    private NamedParameterJdbcTemplate jdbc;
+
+    @Autowired
+    public BusinessCardManagerDao(DataSource dataSource) {
+        this.jdbc = new NamedParameterJdbcTemplate(dataSource);
+    }
 
     public List<BusinessCard> searchBusinessCard(String keyword) {
-        List<BusinessCard> list = new ArrayList<>();
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put("keyword", "%" + keyword + "%");
 
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        String sql = "SELECT name, phone, companyName, createDate FROM card where name LIKE ?";
-
-        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, "%" + keyword + "%");
-
-            try (ResultSet rs = ps.executeQuery()) {
-                SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd hh:mm:ss zzz yyyy", new Locale("us"));
-
-                while (rs.next()) {
-                    String name = rs.getString(1);
-                    String phone = rs.getString(2);
-                    String companyName = rs.getString(3);
-                    String date = rs.getString(4);
-                    Date createDate = dateFormat.parse(date);
-
-                    BusinessCard businessCard = new BusinessCard(name, phone, companyName, createDate);
-                    list.add(businessCard);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        return list;
+        return jdbc.query(SELECT_ALL, params, new BusinessCardMapper());
     }
 
     public int addBusinessCard(BusinessCard businessCard) {
-        int insertCount = 0;
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", businessCard.getName());
+        params.put("phone", businessCard.getPhone());
+        params.put("companyName", businessCard.getCompanyName());
+        params.put("createDate", businessCard.getCreateDate().toString());
 
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+        return jdbc.update(INSERT_ONE, params);
+    }
+
+    private static final class BusinessCardMapper implements RowMapper<BusinessCard> {
+        public BusinessCard mapRow(ResultSet rs, int rowNum) throws SQLException {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd hh:mm:ss zzz yyyy", new Locale("us"));
+
+            String name = rs.getString(1);
+            String phone = rs.getString(2);
+            String companyName = rs.getString(3);
+            String date = rs.getString(4);
+            Date createDate = null;
+
+            try {
+                createDate = dateFormat.parse(date);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+            return new BusinessCard(name, phone, companyName, createDate);
         }
-
-        String sql = "INSERT INTO card (name, phone, companyName, createDate) VALUES (?, ?, ?, ?)";
-
-        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, businessCard.getName());
-            ps.setString(2, businessCard.getPhone());
-            ps.setString(3, businessCard.getCompanyName());
-            ps.setString(4, businessCard.getCreateDate().toString());
-
-            insertCount = ps.executeUpdate();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        return insertCount;
     }
 }
